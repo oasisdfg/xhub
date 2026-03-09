@@ -1,0 +1,119 @@
+<UserControl x:Class="xhub.Views.ProgramCard"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:models="clr-namespace:xhub.Models">
+
+    <Border Background="{StaticResource CardBrush}"
+            BorderBrush="{StaticResource CardBorderBrush}"
+            BorderThickness="1"
+            CornerRadius="6"
+            Margin="0,0,0,10"
+            Padding="20,16">
+
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- Program name + version -->
+            <StackPanel Grid.Column="0" Grid.Row="0"
+                        Orientation="Horizontal"
+                        VerticalAlignment="Center">
+                <TextBlock Text="{Binding Name}"
+                           FontSize="15"
+                           FontWeight="SemiBold"
+                           Foreground="{StaticResource PrimaryTextBrush}"/>
+                <TextBlock Text="{Binding Version}"
+                           FontSize="11"
+                           Foreground="{StaticResource MutedTextBrush}"
+                           VerticalAlignment="Bottom"
+                           Margin="8,0,0,2"/>
+            </StackPanel>
+
+            <!-- Action button — colour changes per status -->
+            <Button Grid.Column="1" Grid.Row="0" Grid.RowSpan="2"
+                    Content="{Binding ButtonText}"
+                    Command="{Binding ActionCommand}"
+                    IsEnabled="{Binding IsActionEnabled}"
+                    VerticalAlignment="Center"
+                    Margin="16,0,0,0">
+                <Button.Style>
+                    <Style TargetType="Button" BasedOn="{StaticResource ActionButtonStyle}">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding Status}"
+                                         Value="{x:Static models:InstallStatus.UpdateAvailable}">
+                                <Setter Property="Background" Value="{StaticResource UpdateAccentBrush}"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Button.Style>
+            </Button>
+
+            <!-- Description -->
+            <TextBlock Grid.Column="0" Grid.Row="1"
+                       Text="{Binding Description}"
+                       FontSize="12"
+                       Foreground="{StaticResource SecondaryTextBrush}"
+                       Margin="0,4,0,0"/>
+
+            <!-- Status badge + progress -->
+            <StackPanel Grid.Column="0" Grid.Row="2"
+                        Margin="0,10,0,0">
+
+                <Border HorizontalAlignment="Left"
+                        Padding="8,3"
+                        CornerRadius="3">
+                    <Border.Style>
+                        <Style TargetType="Border">
+                            <Setter Property="Background" Value="#FF2E2E2E"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding Status}"
+                                             Value="{x:Static models:InstallStatus.Installed}">
+                                    <Setter Property="Background" Value="#FF1A3025"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding Status}"
+                                             Value="{x:Static models:InstallStatus.UpdateAvailable}">
+                                    <Setter Property="Background" Value="#FF362010"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
+
+                    <TextBlock Text="{Binding StatusText}"
+                               FontSize="11"
+                               FontWeight="Medium">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Foreground" Value="{StaticResource StatusReadyBrush}"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding Status}"
+                                                 Value="{x:Static models:InstallStatus.Installed}">
+                                        <Setter Property="Foreground" Value="{StaticResource StatusInstalledBrush}"/>
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding Status}"
+                                                 Value="{x:Static models:InstallStatus.UpdateAvailable}">
+                                        <Setter Property="Foreground" Value="{StaticResource StatusUpdateBrush}"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                </Border>
+
+                <!-- Progress bar (shown during install/update) -->
+                <ProgressBar Value="{Binding Progress}"
+                             Maximum="100"
+                             Style="{StaticResource DarkProgressBarStyle}"
+                             Visibility="{Binding ProgressVisibility}"
+                             Margin="0,8,0,0"/>
+            </StackPanel>
+        </Grid>
+    </Border>
+
+</UserControl>
