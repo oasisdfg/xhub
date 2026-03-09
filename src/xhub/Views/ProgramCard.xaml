@@ -107,7 +107,7 @@
                 </Border>
 
                 <!-- Progress bar (shown during install/update) -->
-                <ProgressBar Value="{Binding Progress}"
+                <ProgressBar Value="{Binding Progress, Mode=OneWay}"
                              Maximum="100"
                              Style="{StaticResource DarkProgressBarStyle}"
                              Visibility="{Binding ProgressVisibility}"

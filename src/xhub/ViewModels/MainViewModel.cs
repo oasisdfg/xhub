@@ -1,66 +1,113 @@
 using System.Collections.ObjectModel;
-using System.ComponentModel;
-using System.Runtime.CompilerServices;
+using System.IO;
 using xhub.Models;
+using xhub.Services;
 
 namespace xhub.ViewModels;
 
-public class MainViewModel : INotifyPropertyChanged
+public class MainViewModel
 {
-    private string _statusText = "Ready.";
+    private static readonly GitHubReleaseService _releaseService = new();
+    private static readonly InstallService _installService = new();
 
     public ObservableCollection<ProgramViewModel> Programs { get; } = new();
 
-    public string StatusText
+    public MainViewModel()
     {
-        get => _statusText;
-        set
+        var pf = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
+
+        Programs.Add(new ProgramViewModel(new ProgramInfo
         {
-            if (_statusText == value) return;
-            _statusText = value;
-            OnPropertyChanged();
+            Name = "xtool",
+            Version = "v4.3.3",
+            Description = "Utility toolkit",
+            Status = InstallStatus.ReadyToInstall,
+            TagPrefix = "",
+            GitHubRepo = "oasisdfg/xtool",
+            ExeName = "xtool.exe",
+            InstallerAssetName = "xtool_setup.exe",
+            InstallPath = Path.Combine(pf, "xhub", "xtool", "xtool.exe")
+        }));
+
+        Programs.Add(new ProgramViewModel(new ProgramInfo
+        {
+            Name = "stretchedres",
+            Version = "v1.0.0",
+            Description = "Custom stretched resolution tool",
+            Status = InstallStatus.ReadyToInstall,
+            TagPrefix = "stretchedres",
+            GitHubRepo = "oasisdfg/xhub",
+            ExeName = "stretchedres.exe",
+            InstallerAssetName = "stretchedres_setup.exe",
+            InstallPath = Path.Combine(pf, "xhub", "stretchedres", "stretchedres.exe")
+        }));
+
+        Programs.Add(new ProgramViewModel(new ProgramInfo
+        {
+            Name = "PlayerLookup",
+            Version = "v1.0.0",
+            Description = "Find Users Past Aliases",
+            Status = InstallStatus.ReadyToInstall,
+            TagPrefix = "playerlookup",
+            GitHubRepo = "oasisdfg/xhub",
+            ExeName = "PlayerLookup.exe",
+            InstallerAssetName = "playerlookup_setup.exe",
+            InstallPath = Path.Combine(pf, "xhub", "PlayerLookup", "PlayerLookup.exe")
+        }));
+
+        // Kick off async version checks without blocking the constructor.
+        _ = CheckAllProgramsAsync();
+    }
+
+    private async Task CheckAllProgramsAsync()
+    {
+        var tasks = Programs.Select(CheckProgramAsync);
+        await Task.WhenAll(tasks);
+    }
+
+    private static async Task CheckProgramAsync(ProgramViewModel vm)
+    {
+        try
+        {
+            var info = vm.Info;
+
+            var release = await _releaseService.GetLatestReleaseAsync(
+                info.GitHubRepo, info.TagPrefix, info.InstallerAssetName);
+
+            if (release == null)
+                return;
+
+            var isInstalled = _installService.IsInstalled(info.InstallPath);
+            InstallStatus status;
+
+            if (isInstalled)
+            {
+                var installedVersion = _installService.GetInstalledVersion(info.InstallPath);
+                var latestParsed = TryParseVersion(release.Version);
+                var installedParsed = TryParseVersion(installedVersion);
+
+                status = (latestParsed != null && installedParsed != null && latestParsed > installedParsed)
+                    ? InstallStatus.UpdateAvailable
+                    : InstallStatus.Installed;
+            }
+            else
+            {
+                status = InstallStatus.ReadyToInstall;
+            }
+
+            vm.UpdateFromCheck(status, release.Version, release.DownloadUrl);
+        }
+        catch (Exception ex)
+        {
+            // Log to debug output to help diagnose API/network issues without crashing the UI.
+            System.Diagnostics.Debug.WriteLine($"[xhub] Version check failed for {vm.Name}: {ex.Message}");
         }
     }
 
-    public MainViewModel()
+    private static Version? TryParseVersion(string? versionStr)
     {
-        Programs.Add(new ProgramViewModel(new ProgramInfo
-        {
-            Name = "Program A",
-            Version = "v1.0.0",
-            Description = "A sample utility for everyday tasks.",
-            Status = InstallStatus.ReadyToInstall
-        }));
-
-        Programs.Add(new ProgramViewModel(new ProgramInfo
-        {
-            Name = "Program B",
-            Version = "v2.1.0",
-            Description = "Another tool for productivity.",
-            Status = InstallStatus.Installed
-        }));
-
-        Programs.Add(new ProgramViewModel(new ProgramInfo
-        {
-            Name = "Program C",
-            Version = "v1.5.0",
-            Description = "Third application with enhanced features.",
-            Status = InstallStatus.UpdateAvailable
-        }));
-
-        Programs.Add(new ProgramViewModel(new ProgramInfo
-        {
-            Name = "Program D",
-            Version = "v3.0.1",
-            Description = "Developer toolkit and utilities.",
-            Status = InstallStatus.ReadyToInstall
-        }));
-
-        StatusText = $"{Programs.Count} programs available.";
+        if (string.IsNullOrEmpty(versionStr)) return null;
+        var s = versionStr.TrimStart('v');
+        return Version.TryParse(s, out var v) ? v : null;
     }
-
-    public event PropertyChangedEventHandler? PropertyChanged;
-
-    private void OnPropertyChanged([CallerMemberName] string? name = null)
-        => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
 }
